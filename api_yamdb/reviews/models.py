@@ -42,15 +42,15 @@ class User(AbstractUser):
 
     @property
     def is_user(self):
-        return self.role == USER
+        return self.role == self.USER
 
     @property
     def is_admin(self):
-        return self.role == ADMIN
+        return self.role == self.ADMIN
 
     @property
     def is_moderator(self):
-        return self.role == MODERATOR
+        return self.role == self.MODERATOR
 
     class Meta:
         ordering = ('id',)
@@ -117,7 +117,6 @@ class Title(models.Model):
     )
     year = models.IntegerField(
         'год',
-        validators=(validate_year, )
     )
     category = models.ForeignKey(
         Category,
