@@ -1,64 +1,43 @@
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.tokens import default_token_generator
 from django.core.validators import MaxValueValidator, MinValueValidator
+
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from .validators import validate_username, validate_year
-
-USER = 'user'
-ADMIN = 'admin'
-MODERATOR = 'moderator'
-
-ROLE_CHOISE = [
-    (USER, USER),
-    (ADMIN, ADMIN),
-    (MODERATOR, MODERATOR),
-]
-
 
 class User(AbstractUser):
-    username = models.CharField(
-        validators=(validate_username,),
-        max_length=150,
-        unique=True,
-        blank=False,
-        null=False
+    USER = 'user'
+    MODERATOR = 'moderator'
+    ADMIN = 'admin'
+    USER_ROLES = (
+        (USER, 'Пользователь'),
+        (MODERATOR, 'Модератор'),
+        (ADMIN, 'Админ'),
     )
+
     email = models.EmailField(
-        max_length=254,
-        unique=True,
+        'Адрес почты',
         blank=False,
-        null=False
+        unique=True,
+        max_length=320,
+    )
+    bio = models.TextField(
+        'Биография',
+        blank=True,
+        null=True
     )
     role = models.CharField(
-        'роль',
-        max_length=20,
-        choices=ROLE_CHOISE,
+        'Роль',
+        max_length=16,
+        choices=USER_ROLES,
         default=USER,
-        blank=True
     )
-    biografia = models.TextField(
-        'биография',
-        blank=True
-    )
-    first_name = models.CharField(
-        'имя',
-        max_length=150,
-        blank=True
-    )
-    last_name = models.CharField(
-        'фамилия',
-        max_length=150,
-        blank=True
-    )
-    confirmation_code = models.CharField(
-        'код подтверждения',
-        max_length=255,
-        null=True,
-        blank=False,
-        default='XXXX'
+    code = models.CharField(
+        'Код подтверждения',
+        max_length=100,
+        blank=True,
     )
 
     @property
