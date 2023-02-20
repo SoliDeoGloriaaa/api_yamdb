@@ -1,11 +1,47 @@
 from rest_framework import serializers
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
+from rest_framework.validators import UniqueValidator
 
-from api_yamdb.reviews.models import Category, Comment, Genre, Review, Title, User
+from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
 class UsersSerializer(serializers.ModelSerializer):
+    username = serializers.RegexField(
+        regex=r'^[\w.@+-]',
+        max_length=150,
+        validators=[UniqueValidator(queryset=User.objects.all())],
+        required=True,
+    )
+    email = serializers.EmailField(
+        max_length=254,
+        validators=[
+            UniqueValidator(queryset=User.objects.all())
+        ]
+    )
+
+    def validate_username(self, value):
+        if value.lower() == "me":
+            raise serializers.ValidationError("Username 'me' is not valid")
+        if (
+            User.objects.filter(username=value).exists()
+            and not User.objects.filter(
+                email=self.initial_data.get('email')
+            ).exists()
+        ):
+            raise serializers.ValidationError('username занят.')
+        return value
+
+    def validate_email(self, email):
+        if (
+            not User.objects.filter(
+                username=self.initial_data.get('username')
+            ).exists()
+            and User.objects.filter(email=email).exists()
+        ):
+            raise serializers.ValidationError('email занят.')
+        return email
+
     class Meta:
         model = User
         fields = (
@@ -37,6 +73,41 @@ class GetTokenSerializer(serializers.ModelSerializer):
 
 
 class SignUpSerializer(serializers.ModelSerializer):
+    username = serializers.RegexField(
+        regex=r'^[\w.@+-]',
+        max_length=150,
+        validators=[UniqueValidator(queryset=User.objects.all())],
+        required=True,
+    )
+    email = serializers.EmailField(
+        max_length=254,
+        validators=[
+            UniqueValidator(queryset=User.objects.all())
+        ]
+    )
+
+    def validate_username(self, value):
+        if value.lower() == "me":
+            raise serializers.ValidationError("Username 'me' is not valid")
+        if (
+                User.objects.filter(username=value).exists()
+                and not User.objects.filter(
+            email=self.initial_data.get('email')
+        ).exists()
+        ):
+            raise serializers.ValidationError('username занят.')
+        return value
+
+    def validate_email(self, email):
+        if (
+                not User.objects.filter(
+                    username=self.initial_data.get('username')
+                ).exists()
+                and User.objects.filter(email=email).exists()
+        ):
+            raise serializers.ValidationError('email занят.')
+        return email
+
 
     class Meta:
         model = User

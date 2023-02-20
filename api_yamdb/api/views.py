@@ -1,9 +1,11 @@
-from django.core.mail import EmailMessage
+from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.mail import EmailMessage, send_mail
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -11,20 +13,16 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from api_yamdb.reviews.models import Category, Genre, Review, Title, User
-from api_yamdb.api.filters import TitleFilter
+from reviews.models import Category, Genre, Review, Title, User
+from .filters import TitleFilter
 from .mixins import ModelMixinSet
-from api_yamdb.api.permissions import (
-    AdminModeratorAuthorPermission, AdminOnly,
-    IsAdminUserOrReadOnly
-)
-from .serializers import (
-    CategorySerializer, CommentSerializer,
-    GenreSerializer, GetTokenSerializer,
-    NotAdminSerializer, ReviewSerializer,
-    SignUpSerializer, TitleReadSerializer,
-    TitleWriteSerializer, UsersSerializer
-)
+from .permissions import (AdminModeratorAuthorPermission, AdminOnly,
+                          IsAdminUserOrReadOnly)
+from .serializers import (CategorySerializer, CommentSerializer,
+                          GenreSerializer, GetTokenSerializer,
+                          NotAdminSerializer, ReviewSerializer,
+                          SignUpSerializer, TitleReadSerializer,
+                          TitleWriteSerializer, UsersSerializer)
 
 
 class UsersViewSet(viewsets.ModelViewSet):
@@ -57,6 +55,11 @@ class UsersViewSet(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.data)
+
+    def update(self, request, *args, **kwargs):
+        if request.method == 'PUT':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().update(request, *args, **kwargs)
 
 
 class APIGetToken(APIView):
@@ -126,9 +129,6 @@ class APISignup(APIView):
 
 
 class CategoryViewSet(ModelMixinSet):
-    """
-    Получить список всех категорий. Права доступа: Доступно без токена
-    """
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = (IsAdminUserOrReadOnly,)
@@ -138,9 +138,6 @@ class CategoryViewSet(ModelMixinSet):
 
 
 class GenreViewSet(ModelMixinSet):
-    """
-    Получить список всех жанров. Права доступа: Доступно без токена
-    """
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     permission_classes = (IsAdminUserOrReadOnly,)
@@ -150,9 +147,6 @@ class GenreViewSet(ModelMixinSet):
 
 
 class TitleViewSet(ModelViewSet):
-    """
-    Получить список всех объектов. Права доступа: Доступно без токена
-    """
     queryset = Title.objects.annotate(
         rating=Avg('reviews__score')
     ).all()
@@ -164,6 +158,50 @@ class TitleViewSet(ModelViewSet):
         if self.action in ('list', 'retrieve'):
             return TitleReadSerializer
         return TitleWriteSerializer
+
+
+@api_view(["POST"])
+@permission_classes([permissions.AllowAny])
+def register(request):
+    serializer = SignUpSerializer(data=request.data)
+    username = request.data.get("username")
+    email = request.data.get("email")
+    if not (serializer.is_valid()):
+        try:
+            User.objects.get(username=username, email=email)
+        except ObjectDoesNotExist:
+            return Response(
+                serializer.errors, status=status.HTTP_400_BAD_REQUEST
+            )
+    user, created = User.objects.get_or_create(username=username, email=email)
+    confirmation_code = default_token_generator.make_token(user)
+    send_mail(
+        "YaMDb: код для подтверждения регистрации",
+        f"Ваш код для получения токена: {confirmation_code}",
+        "from@yamdb.com",
+        [email],
+        fail_silently=False,
+    )
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@permission_classes([permissions.AllowAny])
+def get_jwt_token(request):
+    serializer = GetTokenSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    user = get_object_or_404(
+        User,
+        username=serializer.validated_data["username"]
+    )
+
+    if default_token_generator.check_token(
+        user, serializer.validated_data["confirmation_code"]
+    ):
+        token = RefreshToken.for_user(user)
+        return Response({"token": str(token)}, status=status.HTTP_200_OK)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
