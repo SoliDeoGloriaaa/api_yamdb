@@ -5,76 +5,53 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from .validators import validate_username, validate_year
-
-
-ROLE_CHOISE = [
-    ('user', 'Пользователь'),
-    ('moderator', 'Модератор'),
-    ('admin', 'Администратор'),
-]
+from .validators import validate_year
 
 
 class User(AbstractUser):
-    username = models.CharField(
-        validators=(validate_username,),
-        max_length=150,
-        unique=True,
-        blank=False,
-        null=False
+    USER = 'user'
+    MODERATOR = 'moderator'
+    ADMIN = 'admin'
+    USER_ROLES = (
+        (USER, 'Пользователь'),
+        (MODERATOR, 'Модератор'),
+        (ADMIN, 'Админ'),
     )
+
     email = models.EmailField(
-        verbose_name='адрес электронной почты',
-        max_length=254,
-        unique=True,
+        'Адрес почты',
         blank=False,
-        null=False
-    )
-    role = models.CharField(
-        verbose_name='роль',
-        max_length=20,
-        choices=ROLE_CHOISE,
-        default='user',
-        blank=True
+        unique=True,
+        max_length=254,
     )
     bio = models.TextField(
-        verbose_name='биография',
-        blank=True
+        'Биография',
+        blank=True,
+        null=True
     )
-    first_name = models.CharField(
-        verbose_name='имя',
-        max_length=150,
-        blank=True
+    role = models.CharField(
+        'Роль',
+        max_length=16,
+        choices=USER_ROLES,
+        default=USER,
     )
-    last_name = models.CharField(
-        verbose_name='фамилия',
-        max_length=150,
-        blank=True
-    )
-    confirmation_code = models.CharField(
-        verbose_name='код подтверждения',
-        max_length=255,
-        null=True,
-        blank=False,
-        default='XXXX'
+    code = models.CharField(
+        'Код подтверждения',
+        max_length=100,
+        blank=True,
     )
 
     @property
     def is_user(self):
-        return self.role == 'user'
-
-    @property
-    def is_admin(self):
-        return self.role == 'admin'
+        return self.role == self.USER
 
     @property
     def is_moderator(self):
-        return self.role == 'moderator'
+        return self.role == self.MODERATOR
 
-    class Meta:
-        ordering = ('id',)
-        verbose_name = 'Пользователь'
-        verbose_name_plural = 'Пользователи'
+    @property
+    def is_admin(self):
+        return self.is_superuser or self.role == self.ADMIN
 
     def __str__(self):
         return self.username

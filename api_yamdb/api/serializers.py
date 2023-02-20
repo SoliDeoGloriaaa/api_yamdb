@@ -6,126 +6,78 @@ from rest_framework.validators import UniqueValidator
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
-class UsersSerializer(serializers.ModelSerializer):
+class DefaultUserCol:
     username = serializers.RegexField(
         regex=r'^[\w.@+-]',
         max_length=150,
-        validators=[UniqueValidator(queryset=User.objects.all())],
-        required=True,
+        validators=[UniqueValidator(queryset=User.objects.all())]
     )
     email = serializers.EmailField(
         max_length=254,
-        validators=[
-            UniqueValidator(queryset=User.objects.all())
-        ]
+        validators=[UniqueValidator(queryset=User.objects.all())]
     )
-
-    def validate_username(self, value):
-        if value.lower() == "me":
-            raise serializers.ValidationError("Username 'me' is not valid")
-        if (
-            User.objects.filter(username=value).exists()
-            and not User.objects.filter(
-                email=self.initial_data.get('email')
-            ).exists()
-        ):
-            raise serializers.ValidationError('username занят.')
-        return value
-
-    def validate_email(self, email):
-        if (
-            not User.objects.filter(
-                username=self.initial_data.get('username')
-            ).exists()
-            and User.objects.filter(email=email).exists()
-        ):
-            raise serializers.ValidationError('email занят.')
-        return email
-
-    class Meta:
-        model = User
-        fields = (
-            'username', 'email', 'first_name',
-            'last_name', 'bio', 'role')
-
-
-class NotAdminSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = (
-            'username', 'email', 'first_name',
-            'last_name', 'bio', 'role')
-        read_only_fields = ('role',)
-
-
-class GetTokenSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(
-        required=True)
-    confirmation_code = serializers.CharField(
-        required=True)
-
-    class Meta:
-        model = User
-        fields = (
-            'username',
-            'confirmation_code'
-        )
-
-
-class SignUpSerializer(serializers.ModelSerializer):
-    username = serializers.RegexField(
-        regex=r'^[\w.@+-]',
+    first_name = serializers.CharField(
         max_length=150,
-        validators=[UniqueValidator(queryset=User.objects.all())],
-        required=True,
+        validators=[UniqueValidator(queryset=User.objects.all())]
     )
-    email = serializers.EmailField(
-        max_length=254,
-        validators=[
-            UniqueValidator(queryset=User.objects.all())
-        ]
+    last_name = serializers.CharField(
+        max_length=150,
+        validators=[UniqueValidator(queryset=User.objects.all())]
     )
 
-    def validate_username(self, value):
-        if value.lower() == "me":
-            raise serializers.ValidationError("Username 'me' is not valid")
-        if (
-                User.objects.filter(username=value).exists()
-                and not User.objects.filter(
-            email=self.initial_data.get('email')
-        ).exists()
-        ):
-            raise serializers.ValidationError('username занят.')
-        return value
 
-    def validate_email(self, email):
-        if (
-                not User.objects.filter(
-                    username=self.initial_data.get('username')
-                ).exists()
-                and User.objects.filter(email=email).exists()
-        ):
-            raise serializers.ValidationError('email занят.')
-        return email
+class UserSerializer(serializers.ModelSerializer):
+    username = DefaultUserCol.username
+    email = DefaultUserCol.email
+
+    class Meta:
+        fields = ('username', 'email', 'first_name',
+                  'last_name', 'bio', 'role')
+        model = User
 
 
+class SignUpSerializer(UserSerializer):
     class Meta:
         model = User
         fields = ('email', 'username')
 
+    def validate(self, data):
+        if data['username'] == 'me':
+            raise serializers.ValidationError(
+                'Имя пользователя me недопустимо'
+            )
+        return data
 
-class CategorySerializer(serializers.ModelSerializer):
+
+class MeSerializer(UserSerializer):
+    first_name = DefaultUserCol.first_name
+    last_name = DefaultUserCol.last_name
 
     class Meta:
-        exclude = ('id', )
+        fields = '__all__'
+        model = User
+        read_only_fields = ('role',)
+
+
+class TokenSerializer(serializers.ModelSerializer):
+    username = serializers.CharField()
+    confirmation_code = serializers.CharField()
+
+    class Meta:
+        fields = ('username', 'confirmation_code')
+        model = User
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        exclude = ('id',)
         model = Category
         lookup_field = 'slug'
 
 
 class GenreSerializer(serializers.ModelSerializer):
-
     class Meta:
-        exclude = ('id', )
+        exclude = ('id',)
         model = Genre
         lookup_field = 'slug'
 
@@ -169,6 +121,10 @@ class ReviewSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    class Meta:
+        fields = '__all__'
+        model = Review
+
     def validate_score(self, value):
         if 0 > value > 10:
             raise serializers.ValidationError('Оценка по 10-бальной шкале!')
@@ -180,15 +136,11 @@ class ReviewSerializer(serializers.ModelSerializer):
         title_id = self.context.get('view').kwargs.get('title_id')
         title = get_object_or_404(Title, pk=title_id)
         if (
-            request.method == 'POST'
-            and Review.objects.filter(title=title, author=author).exists()
+                request.method == 'POST'
+                and Review.objects.filter(title=title, author=author).exists()
         ):
             raise ValidationError('Может существовать только один отзыв!')
         return data
-
-    class Meta:
-        fields = '__all__'
-        model = Review
 
 
 class CommentSerializer(serializers.ModelSerializer):
