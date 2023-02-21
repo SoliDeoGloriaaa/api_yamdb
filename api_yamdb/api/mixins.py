@@ -1,8 +1,10 @@
-from rest_framework.mixins import (CreateModelMixin, DestroyModelMixin,
-                                   ListModelMixin)
-from rest_framework.viewsets import GenericViewSet
+from rest_framework import mixins, viewsets
 
 
-class ModelMixinSet(CreateModelMixin, ListModelMixin,
-                    DestroyModelMixin, GenericViewSet):
+class DestroyListCreateViewSet(
+    mixins.DestroyModelMixin,
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
     pass

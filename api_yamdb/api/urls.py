@@ -1,8 +1,15 @@
 from django.urls import include, path
 from rest_framework.routers import SimpleRouter
 
-from .views import (UserViewSet, jwt_token, signup, CategoryViewSet,
-                    CommentViewSet, GenreViewSet, ReviewViewSet, TitleViewSet)
+from api.views import (
+    CategoryViewSet,
+    CommentViewSet,
+    GenreViewSet,
+    jwt_token, signup,
+    ReviewsViewSet,
+    TitleViewSet,
+    UserViewSet,
+)
 
 app_name = 'api'
 
@@ -13,7 +20,7 @@ router.register('titles', TitleViewSet, basename='titles')
 router.register('genres', GenreViewSet, basename='genres')
 router.register(
     r'titles/(?P<title_id>\d+)/reviews',
-    ReviewViewSet, basename='reviews'
+    ReviewsViewSet, basename='reviews'
 )
 router.register(
     r'titles/(?P<title_id>\d+)/reviews/(?P<review_id>\d+)/comments',
