@@ -1,6 +1,5 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth.tokens import default_token_generator
-from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
 from django.db.models import Avg
 from rest_framework import status
@@ -12,6 +11,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
+from api_yamdb.settings import EMAIL_ADMIN
 from api.filters import TitleFilter
 from api.mixins import DestroyListCreateViewSet
 from api.permissions import (
@@ -38,21 +38,28 @@ from reviews.models import Category, Genre, Review, Title, User
 @permission_classes([AllowAny])
 def signup(request):
     serializer = SignUpSerializer(data=request.data)
-    username = request.data.get('username')
-    email = request.data.get('email')
-    if not serializer.is_valid():
-        try:
-            User.objects.get(username=username, email=email)
-        except ObjectDoesNotExist:
-            return Response(
-                serializer.errors, status=status.HTTP_400_BAD_REQUEST
-            )
-    user = User.objects.get_or_create(username=username, email=email)[0]
+    if User.objects.filter(username=request.data.get('username'),
+                           email=request.data.get('email')).exists():
+        user, _ = User.objects.get_or_create(
+            username=request.data.get('username'),
+            email=request.data.get('email'))
+        if _ is False:
+            confirmation_code = default_token_generator.make_token(user)
+            user.confirmation_code = confirmation_code
+            user.save()
+            return Response('Токен обновлен', status=status.HTTP_200_OK)
+
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    email = serializer.validated_data.get('email')
+    username = serializer.validated_data.get('username')
+    user = User.objects.get(username=username, email=email)
     confirmation_code = default_token_generator.make_token(user)
+    user.confirmation_code = confirmation_code
     send_mail(
         'YaMDb',
         f'Код подтверждения для доступа к API: {confirmation_code}',
-        'from@yamdb.com',
+        EMAIL_ADMIN,
         [email],
     )
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -67,7 +74,7 @@ def jwt_token(request):
         User, username=serializer.validated_data['username']
     )
     if not default_token_generator.check_token(
-            user, serializer.validated_data["confirmation_code"]
+            user, serializer.validated_data['confirmation_code']
     ):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

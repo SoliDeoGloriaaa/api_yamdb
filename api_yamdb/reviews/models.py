@@ -1,12 +1,8 @@
 from django.contrib.auth.models import AbstractUser
-from django.contrib.auth.tokens import default_token_generator
 from django.core.validators import MaxValueValidator, MinValueValidator
-
 from django.db import models
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 
-from .validators import validate_year
+from .validators import validate_username, validate_year
 
 
 class User(AbstractUser):
@@ -33,7 +29,7 @@ class User(AbstractUser):
     )
     role = models.CharField(
         'Роль',
-        max_length=16,
+        max_length=50,
         choices=USER_ROLES,
         default=USER,
     )
@@ -42,6 +38,19 @@ class User(AbstractUser):
         max_length=100,
         blank=True,
     )
+
+    username = models.CharField(
+        validators=(validate_username,),
+        verbose_name='Имя пользователя',
+        max_length=150,
+        null=True,
+        unique=True
+    )
+
+    class Meta:
+        ordering = ['id']
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
 
     @property
     def is_user(self):
@@ -59,16 +68,6 @@ class User(AbstractUser):
         return self.username
 
 
-@receiver(post_save, sender=User)
-def post_save(sender, instance, created, **kwags):
-    if created:
-        confirmation_code = default_token_generator.make_token(
-            instance
-        )
-        instance.confirmation_code = confirmation_code
-        instance.save()
-
-
 class Category(models.Model):
     name = models.CharField(
         verbose_name='Название',
@@ -82,6 +81,7 @@ class Category(models.Model):
     )
 
     class Meta:
+        ordering = ('name',)
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
 
@@ -102,6 +102,7 @@ class Genre(models.Model):
     )
 
     class Meta:
+        ordering = ('name',)
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
 
@@ -142,6 +143,7 @@ class Title(models.Model):
     )
 
     class Meta:
+        ordering = ('name',)
         verbose_name = 'Произведение'
         verbose_name_plural = 'Произведения'
 
@@ -236,6 +238,7 @@ class Comment(models.Model):
     )
 
     class Meta:
+        ordering = ('pub_date',)
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
 
