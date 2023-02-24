@@ -39,22 +39,27 @@ python -m venv venv
 source venv/bin/activate
 ``` 
 
-3. Установить зависимости командой:
+3. Обновите систему управления пакетами
+```
+python.exe -m pip install --upgrade pip
+```
+
+4. Установить зависимости командой:
 ```
 pip install -r requirements.txt
 ```
 
-4. Перейти в директорию api_yamdb:
+5. Перейти в директорию api_yamdb:
 ```
 cd api_yamdb
 ```
 
-5. Выполните миграции командой:
+6. Выполните миграции командой:
 ```
 python manage.py migrate
 ```
 
-6. Выполните команду для запуска dev-сервера
+7. Выполните команду для запуска dev-сервера
 ```
 python manage.py runserver
 ```
