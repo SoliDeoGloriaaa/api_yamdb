@@ -15,7 +15,7 @@ def validate_year(value):
 
 def validate_username(value):
     regex = re.compile(r'^[\w.@+-]')
-    if value == 'me':
+    if value == 'me' or value == 'ME':
         raise ValidationError(
             ('Имя пользователя не может быть <me>.'),
             params={'value': value},

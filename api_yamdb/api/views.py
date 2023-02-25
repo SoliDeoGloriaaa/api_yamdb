@@ -40,10 +40,10 @@ def signup(request):
     serializer = SignUpSerializer(data=request.data)
     if User.objects.filter(username=request.data.get('username'),
                            email=request.data.get('email')).exists():
-        user, _ = User.objects.get_or_create(
+        user, create = User.objects.get_or_create(
             username=request.data.get('username'),
             email=request.data.get('email'))
-        if _ is False:
+        if create is False:
             confirmation_code = default_token_generator.make_token(user)
             user.confirmation_code = confirmation_code
             user.save()
