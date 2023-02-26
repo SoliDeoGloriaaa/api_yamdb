@@ -38,24 +38,21 @@ from reviews.models import Category, Genre, Review, Title, User
 @permission_classes([AllowAny])
 def signup(request):
     serializer = SignUpSerializer(data=request.data)
-    if User.objects.filter(username=request.data.get('username'),
-                           email=request.data.get('email')).exists():
-        user, create = User.objects.get_or_create(
-            username=request.data.get('username'),
-            email=request.data.get('email'))
-        if create is False:
-            confirmation_code = default_token_generator.make_token(user)
-            user.confirmation_code = confirmation_code
-            user.save()
-            return Response('Токен обновлен', status=status.HTTP_200_OK)
-
     serializer.is_valid(raise_exception=True)
-    serializer.save()
-    email = serializer.validated_data.get('email')
-    username = serializer.validated_data.get('username')
-    user = User.objects.get(username=username, email=email)
+
+    username = serializer.validated_data['username']
+    email = serializer.validated_data['email']
+    username_taken = User.objects.filter(username=username).exists()
+    email_taken = User.objects.filter(email=email).exists()
+
+    if email_taken and not username_taken:
+        return Response('email занят', status=status.HTTP_400_BAD_REQUEST)
+
+    if username_taken and not email_taken:
+        return Response('username занят', status=status.HTTP_400_BAD_REQUEST)
+
+    user, _ = User.objects.get_or_create(username=username, email=email)
     confirmation_code = default_token_generator.make_token(user)
-    user.confirmation_code = confirmation_code
     send_mail(
         'YaMDb',
         f'Код подтверждения для доступа к API: {confirmation_code}',
