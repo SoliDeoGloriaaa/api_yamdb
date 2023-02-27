@@ -36,7 +36,7 @@ python -m venv venv
 ```
 
 ```
-source venv/bin/activate
+source venv/Scripts/activate
 ``` 
 
 3. Обновите систему управления пакетами
