@@ -30,7 +30,7 @@ class SignUpSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
 
     def validate_username(self, value):
-        if value == 'me' or value == 'ME':
+        if value.upper() == 'ME':
             raise serializers.ValidationError(
                 'Имя пользователя me недопустимо'
             )
