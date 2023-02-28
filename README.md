@@ -25,7 +25,7 @@
 
 
 ## Как запустить проект пользователям системы Windows
-1. Клонировать репозиторий командой:
+1. Клонировать репозиторий командой
 ```
 git clone git@github.com:SoliDeoGloriaaa/api_yamdb.git
 ```
@@ -44,18 +44,17 @@ source venv/Scripts/activate
 python.exe -m pip install --upgrade pip
 ```
 
-4. Установить зависимости командой:
+4. Установить зависимости командой
 ```
 pip install -r requirements.txt
 ```
 
-5. Перейти в директорию api_yamdb:
+5. Перейти в директорию api_yamdb
 ```
 cd api_yamdb
 ```
 
-6. Выполните миграции командой:
-
+6. Выполните миграции командой
 ```
 python manage.py migrate
 ```
