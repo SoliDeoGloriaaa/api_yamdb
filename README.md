@@ -55,9 +55,7 @@ cd api_yamdb
 ```
 
 6. Выполните миграции командой:
-```
-python manage.py makemigrations
-```
+
 ```
 python manage.py migrate
 ```
